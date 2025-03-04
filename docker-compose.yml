@@ -1,0 +1,56 @@
+services:
+  api:
+    build:
+      context: .
+    command: ["node", "src/api.js"]
+    ports:
+      - "3002:3002"
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
+      - API_KEY=supersecureapikey123
+    restart: always
+    
+  monitor:
+    build:
+      context: .
+    command: ["node", "src/monitor.js"]
+    ports:
+      - "3001:3001"
+    depends_on:
+      - redis
+      - worker
+    environment:
+      - REDIS_HOST=redis
+    restart: always
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6378:6379"
+    restart: always
+
+  producer:
+    build:
+      context: .
+    command: ["node", "src/producer.js"]
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
+    restart: always
+
+  worker:
+    build:
+      context: .
+    command: ["node", "src/workers/jobWorker.js"]
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
+    deploy:
+      replicas: 3  # Start with 3 worker instances
+      restart_policy:
+        condition: always
